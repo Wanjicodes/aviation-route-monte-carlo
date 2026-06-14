@@ -1,0 +1,13 @@
+fiscal_year,reporting_period_start,reporting_period_end,passenger_seat_factor,passengers_millions,rpk_billions,ask_billions,fuel_share_of_opex,source_reference,notes
+2014-15,2014-04-01,2015-03-31,0.795,49.3,255.6,295.5,0.378,Emirates Group Annual Report FY2014-15,Pre-fuel-crash baseline
+2015-16,2015-04-01,2016-03-31,0.766,51.9,267.8,330.2,0.262,Emirates Group Annual Report FY2015-16,Fuel price crash
+2016-17,2016-04-01,2017-03-31,0.752,56.1,276.6,368.1,0.232,Emirates Group Annual Report FY2016-17,Capacity glut continues
+2017-18,2017-04-01,2018-03-31,0.775,58.5,292.2,377,0.282,Emirates Group Annual Report FY2017-18,Recovery in yields
+2018-19,2018-04-01,2019-03-31,0.768,58.6,299.9,390.7,0.328,Emirates Group Annual Report FY2018-19,Fuel rising sharply
+2019-20,2019-04-01,2020-03-31,0.785,56.2,288.1,367.1,0.292,Emirates Group Annual Report FY2019-20,COVID hit in last month
+2020-21,2020-04-01,2021-03-31,0.443,6.6,28.3,64,0.18,Emirates Group Annual Report FY2020-21,Full COVID year
+2021-22,2021-04-01,2022-03-31,0.586,19.6,93.7,159.9,0.23,Emirates Group Annual Report FY2021-22,Recovery begins
+2022-23,2022-04-01,2023-03-31,0.795,43.6,225.8,284,0.395,Emirates Group Annual Report FY2022-23,Strong demand return
+2023-24,2023-04-01,2024-03-31,0.799,51.9,275.3,344.7,0.31,Emirates Group Annual Report FY2023-24,Operational normalisation
+2024-25,2024-04-01,2025-03-31,0.789,53.7,283.7,359.4,0.31,Emirates Group Annual Report FY2024-25,Most recent full year (network PSF 78.9%)
+2025-26,2025-04-01,2026-03-31,0.784,53.2,279.2,355.9,0.29,Emirates Group Annual Report FY2025-26,"Regional conflict airspace disruptions jet fuel price volatile, fuel supply, supply chain distrupted currency"

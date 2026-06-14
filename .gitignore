@@ -5,7 +5,11 @@ outputs/cache/
 .env
 .vscode/
 *.log
-
-# Data caches
+# Ignore generated/fetched raw data, but commit hand-curated source data
+data/raw/*.json
+data/raw/*.parquet
+data/raw/cached_*
 data/cache/
-data/raw/
+__pycache__/
+*.py[cod]
+*$py.class
