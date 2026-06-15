@@ -26,53 +26,54 @@ This engine answers questions like:
 
 ## Architecture
 
-┌─ Data Layer ──────────────────────────────────────────────────┐
+```mermaid
+flowchart TD
+    subgraph DataLayer ["📂 Data Layer"]
+        direction TB
+        CSV[emirates_annual_data.csv<br/><i>hand-curated source</i>]
+        EIA[EIA API<br/><i>live jet fuel prices</i>]
+        FRED[FRED API<br/><i>live Brent crude</i>]
+        Cache[Local cache<br/><i>24h TTL</i>]
+        Historical[historical_traffic.py<br/><i>Prophet input builder</i>]
 
-│  data/raw/emirates_annual_data.csv  ← hand-curated source     │
+        CSV --> Historical
+        EIA --> Cache --> Historical
+        FRED --> Cache
+    end
 
-│  data/ingestion/eia_client.py       ← live EIA jet fuel       │
+    subgraph MLLayer ["🧠 ML Layer"]
+        direction TB
+        Prophet[Prophet Model<br/><i>trend + seasonality + shocks</i>]
+        Diag[Diagnostics<br/><i>rolling CV, residuals</i>]
 
-│  data/ingestion/fred_client.py      ← live FRED Brent crude   │
+        Prophet --> Diag
+    end
 
-│  data/ingestion/cache.py            ← 24h TTL local cache     │
+    subgraph Engine ["⚙️ Simulation Engine"]
+        direction TB
+        Shock[ShockPack Generator<br/><i>Cholesky-correlated</i>]
+        Impact[Impact Model<br/><i>deterministic P&amp;L cascade</i>]
+        Risk[Risk Metrics<br/><i>VaR, ES, BELF</i>]
 
-│  data/ingestion/historical_traffic.py ← Prophet input builder │
+        Shock --> Impact --> Risk
+    end
 
-└───────────────────────────────────────────────────────────────┘
+    subgraph Outputs ["📊 Outputs"]
+        direction TB
+        JSON[simulation_results.json]
+        Plots[Diagnostic plots .png]
+    end
 
-↓
+    Historical --> Prophet
+    Prophet --> Shock
+    Risk --> JSON
+    Diag --> Plots
 
-┌─ ML Layer ────────────────────────────────────────────────────┐
-
-│  ml/prophet_model.py        ← fitted Prophet w/ regressors    │
-
-│  ml/prophet_diagnostics.py  ← CV, metrics, residual analysis  │
-
-│  ml/demand_forecast.py      ← seasonal patterns (legacy)      │
-
-└───────────────────────────────────────────────────────────────┘
-
-↓
-
-┌─ Simulation Engine ───────────────────────────────────────────┐
-
-│  engine/shock_generator.py   ← Cholesky-correlated ShockPacks │
-
-│  engine/impact_model.py      ← deterministic P&L cascade      │
-
-│  engine/risk_metrics.py      ← VaR, ES, BELF, percentiles     │
-
-└───────────────────────────────────────────────────────────────┘
-
-↓
-
-┌─ Outputs ─────────────────────────────────────────────────────┐
-
-│  outputs/simulation_results.json ← all scenarios + metrics    │
-
-│  outputs/*.png                   ← diagnostic plots           │
-
-└───────────────────────────────────────────────────────────────┘
+    style DataLayer fill:#e8f4f8,stroke:#1f6f8b
+    style MLLayer fill:#f0e8f8,stroke:#6b3e7c
+    style Engine fill:#e8f8ec,stroke:#2d6a4f
+    style Outputs fill:#fff4e6,stroke:#cc8400
+```
 
 ---
 
