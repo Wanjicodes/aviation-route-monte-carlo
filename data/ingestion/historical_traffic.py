@@ -57,26 +57,6 @@ COVID_MONTHLY_LF = {
     12: 0.65, # Mar 2021
 }
 
-# ── ISLAMIC CALENDAR DATES (RAMADAN + HAJJ) ──────────────────────────────────
-# Year → (Ramadan start date, Eid al-Fitr date, Hajj/Day of Arafah date)
-# All dates are Gregorian, approximate to within 1-2 days due to lunar calendar.
-# VERIFY against Umm al-Qura calendar or IslamicFinder before publication.
-ISLAMIC_DATES = {
-    2014: {"ramadan_start": "2014-06-28", "eid_fitr": "2014-07-28", "hajj_peak": "2014-10-03"},
-    2015: {"ramadan_start": "2015-06-17", "eid_fitr": "2015-07-17", "hajj_peak": "2015-09-22"},
-    2016: {"ramadan_start": "2016-06-06", "eid_fitr": "2016-07-06", "hajj_peak": "2016-09-10"},
-    2017: {"ramadan_start": "2017-05-26", "eid_fitr": "2017-06-25", "hajj_peak": "2017-08-31"},
-    2018: {"ramadan_start": "2018-05-15", "eid_fitr": "2018-06-14", "hajj_peak": "2018-08-20"},
-    2019: {"ramadan_start": "2019-05-05", "eid_fitr": "2019-06-04", "hajj_peak": "2019-08-10"},
-    2020: {"ramadan_start": "2020-04-23", "eid_fitr": "2020-05-23", "hajj_peak": "2020-07-30"},
-    2021: {"ramadan_start": "2021-04-12", "eid_fitr": "2021-05-12", "hajj_peak": "2021-07-19"},
-    2022: {"ramadan_start": "2022-04-01", "eid_fitr": "2022-05-01", "hajj_peak": "2022-07-08"},
-    2023: {"ramadan_start": "2023-03-22", "eid_fitr": "2023-04-21", "hajj_peak": "2023-06-27"},
-    2024: {"ramadan_start": "2024-03-10", "eid_fitr": "2024-04-09", "hajj_peak": "2024-06-15"},
-    2025: {"ramadan_start": "2025-02-28", "eid_fitr": "2025-03-30", "hajj_peak": "2025-06-05"},
-    2026: {"ramadan_start": "2026-02-17", "eid_fitr": "2026-03-19", "hajj_peak": "2026-05-26"},
-}
-
 
 def load_annual_data() -> pd.DataFrame:
     """Load and validate the annual data CSV."""
@@ -211,53 +191,30 @@ def build_historical_series() -> pd.DataFrame:
     return series
 
 
-def _month_contains_date(df_ds: pd.Series, date_str: str) -> pd.Series:
-    """Helper: returns 1 if the row's month contains the given date."""
-    target = pd.Timestamp(date_str)
-    return (
-        (df_ds.dt.year == target.year) & 
-        (df_ds.dt.month == target.month)
-    ).astype(int)
-
-
 def add_isc_regressors(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Includes ISC-specific regressors to the Prophet input which become
-    explanatory variables Prophet learns coefficients for.
+    Add ISC-specific shock regressors to the Prophet input.
 
- Regressors:
-    Calendar-based regressors:
-    - is_diwali_month       : 1 in November (Diwali falls late Oct - mid Nov)
-    - is_summer_holiday     : 1 in July-August (school holidays drive ISC traffic)
+    Design decision (documented in project README):
+    I had intially included calendar-recurring events (Diwali, Eid, Ramadan,
+    Hajj, summer holidays) but decided to remove them after observing collinearity with
+    Prophet's yearly seasonality where the Fourier decomposition in s(t) already
+    captures these recurring patterns.
 
-    Lunar-calendar regressors (vary year to year):
-    - is_ramadan_month      : 1 if month contains Ramadan start (mild demand drop)
-    - is_eid_fitr_month     : 1 if month contains Eid al-Fitr (BIG travel spike)
-    - is_hajj_month         : 1 if month contains Hajj peak (corridor disruption)
+    Only non-recurring shock regressors are retained. These flag periods
+    where signal cannot be learned from seasonality alone:
 
-    Shock period regressors:
-    - is_covid              : Apr 2020 - Sep 2021 (full disruption + recovery)
-    - is_fuel_supply_disruption : Apr 2025 - Mar 2026 (year-long fuel/supply pressure)
-    - is_regional_conflict  : Feb 2026 - Mar 2026 (acute conflict + airspace)
+    - is_covid                  : Apr 2020 - Sep 2021 (pandemic + recovery)
+    - is_fuel_supply_disruption : Apr 2025 - Mar 2026 (year-long pressure)
+    - is_regional_conflict      : Feb 2026 - Mar 2026 (acute conflict + airspace closure)
+
+    Future versions using real observed granular monthly data may revisit this,
+    calendar regressors become informative when year-to-year magnitude
+    varies independently of the seasonal pattern.
     """
     df = df.copy()
-    df["month"] = df["ds"].dt.month
 
-    # ── Fixed calendar events ────────────────────────────────────────────
-    df["is_diwali_month"] = (df["month"] == 11).astype(int)
-    df["is_summer_holiday"] = df["month"].isin([7, 8]).astype(int)
-
-    # ── Lunar calendar events (year-specific) ────────────────────────────
-    df["is_ramadan_month"] = 0
-    df["is_eid_fitr_month"] = 0
-    df["is_hajj_month"] = 0
-
-    for year, dates in ISLAMIC_DATES.items():
-        df["is_ramadan_month"] |= _month_contains_date(df["ds"], dates["ramadan_start"])
-        df["is_eid_fitr_month"] |= _month_contains_date(df["ds"], dates["eid_fitr"])
-        df["is_hajj_month"] |= _month_contains_date(df["ds"], dates["hajj_peak"])
-
-    # ── Major shock periods ──────────────────────────────────────────────
+    # COVID: Apr 2020 to Sep 2021 (full disruption + early recovery)
     covid_start = pd.Timestamp("2020-04-01")
     covid_end = pd.Timestamp("2021-09-30")
     df["is_covid"] = ((df["ds"] >= covid_start) & (df["ds"] <= covid_end)).astype(int)
@@ -276,7 +233,7 @@ def add_isc_regressors(df: pd.DataFrame) -> pd.DataFrame:
         (df["ds"] >= conflict_start) & (df["ds"] <= conflict_end)
     ).astype(int)
 
-    return df.drop(columns=["month"])
+    return df
 
 
 def get_prophet_training_data(include_regressors: bool = True) -> pd.DataFrame:

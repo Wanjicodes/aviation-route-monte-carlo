@@ -24,7 +24,7 @@ import pandas as pd
 import numpy as np
 from pathlib import Path
 from prophet import Prophet
-from data.ingestion.historical_traffic import get_prophet_training_data, ISLAMIC_DATES
+from data.ingestion.historical_traffic import get_prophet_training_data
 
 
 # Suppress Prophet's verbose output
@@ -36,11 +36,6 @@ logging.getLogger("cmdstanpy").setLevel(logging.WARNING)
 
 # ── REGRESSOR CONFIGURATION ──────────────────────────────────────────────────
 REGRESSOR_COLS = [
-    "is_diwali_month",
-    "is_summer_holiday",
-    "is_ramadan_month",
-    "is_eid_fitr_month",
-    "is_hajj_month",
     "is_covid",
     "is_fuel_supply_disruption",
     "is_regional_conflict",
@@ -105,41 +100,15 @@ def generate_future_regressors(
 ) -> pd.DataFrame:
     """
     Build the future regressor frame for forecasting.
-    
-    This is a critical step Prophet requires: for every future month,
-    we must specify the value of every regressor.
-    
-    Defaults (assume normalisation):
-    - Calendar regressors: computed from Islamic calendar dates
-    - Shock regressors: 0 by default (assume disruptions end)
-    
-    Set assume_conflict_continues=True for stress scenarios.
+
+    Prophet requires every regressor's future value to be specified.
+    All shocks default to 0 (assume disruption ends). Set assume_*
+    flags to True to keep specific shocks active for stress scenarios.
     """
-    # Generate future month timestamps
     start = last_training_date + pd.DateOffset(months=1)
     future_dates = pd.date_range(start=start, periods=forecast_months, freq="MS")
     future = pd.DataFrame({"ds": future_dates})
 
-    # Calendar regressors
-    future["is_diwali_month"] = (future["ds"].dt.month == 11).astype(int)
-    future["is_summer_holiday"] = future["ds"].dt.month.isin([7, 8]).astype(int)
-
-    # Lunar calendar regressors (year-aware)
-    future["is_ramadan_month"] = 0
-    future["is_eid_fitr_month"] = 0
-    future["is_hajj_month"] = 0
-
-    for year, dates in ISLAMIC_DATES.items():
-        for col, date_key in [
-            ("is_ramadan_month", "ramadan_start"),
-            ("is_eid_fitr_month", "eid_fitr"),
-            ("is_hajj_month", "hajj_peak"),
-        ]:
-            target = pd.Timestamp(dates[date_key])
-            mask = (future["ds"].dt.year == target.year) & (future["ds"].dt.month == target.month)
-            future.loc[mask, col] = 1
-
-    # Shock regressors (default = 0 = assume disruption ends)
     future["is_covid"] = 0
     future["is_fuel_supply_disruption"] = 1 if assume_fuel_continues else 0
     future["is_regional_conflict"] = 1 if assume_conflict_continues else 0

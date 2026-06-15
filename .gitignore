@@ -13,3 +13,11 @@ data/cache/
 __pycache__/
 *.py[cod]
 *$py.class
+
+# Simulation outputs are regeneratable, don't commit
+outputs/simulation_results.json
+outputs/*.csv
+outputs/*.log
+
+# But keep the diagnostic plots (they're documentation artefacts)
+!outputs/*.png
