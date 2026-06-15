@@ -26,53 +26,25 @@ This engine answers questions like:
 
 ## Architecture
 
-```mermaid
-flowchart TD
-    subgraph DataLayer ["📂 Data Layer"]
-        direction TB
-        CSV[emirates_annual_data.csv<br/><i>hand-curated source</i>]
-        EIA[EIA API<br/><i>live jet fuel prices</i>]
-        FRED[FRED API<br/><i>live Brent crude</i>]
-        Cache[Local cache<br/><i>24h TTL</i>]
-        Historical[historical_traffic.py<br/><i>Prophet input builder</i>]
+```
+Aviation Route Monte Carlo Pipeline Architecture
 
-        CSV --> Historical
-        EIA --> Cache --> Historical
-        FRED --> Cache
-    end
-
-    subgraph MLLayer ["🧠 ML Layer"]
-        direction TB
-        Prophet[Prophet Model<br/><i>trend + seasonality + shocks</i>]
-        Diag[Diagnostics<br/><i>rolling CV, residuals</i>]
-
-        Prophet --> Diag
-    end
-
-    subgraph Engine ["⚙️ Simulation Engine"]
-        direction TB
-        Shock[ShockPack Generator<br/><i>Cholesky-correlated</i>]
-        Impact[Impact Model<br/><i>deterministic P&amp;L cascade</i>]
-        Risk[Risk Metrics<br/><i>VaR, ES, BELF</i>]
-
-        Shock --> Impact --> Risk
-    end
-
-    subgraph Outputs ["📊 Outputs"]
-        direction TB
-        JSON[simulation_results.json]
-        Plots[Diagnostic plots .png]
-    end
-
-    Historical --> Prophet
-    Prophet --> Shock
-    Risk --> JSON
-    Diag --> Plots
-
-    style DataLayer fill:#e8f4f8,stroke:#1f6f8b
-    style MLLayer fill:#f0e8f8,stroke:#6b3e7c
-    style Engine fill:#e8f8ec,stroke:#2d6a4f
-    style Outputs fill:#fff4e6,stroke:#cc8400
+  [Emirates Annual Reports]
+  [EIA jet fuel API]              ──┐
+  [FRED Brent crude API]            ├──>  Data Layer (ingestion + 24h cache)
+                                    │         │
+                                    │         ▼
+                                    │     Prophet Model
+                                    │     (trend + seasonality + 3 shocks)
+                                    │         │
+                                    └─────────┼────────┐
+                                              ▼        │
+                                       ShockPack ──> Impact Model ──> Risk Metrics
+                                       (Cholesky)    (deterministic)  (VaR, ES, BELF)
+                                                                          │
+                                                                          ▼
+                                                              [simulation_results.json]
+                                                              [diagnostic plots .png]
 ```
 
 ---
